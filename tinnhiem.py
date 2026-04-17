@@ -1,73 +1,81 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
+import plotly.graph_objects as go
 
-def show_academic_credit_scoring():
-    st.title("🛡️ AgriLoop Credit Scoring System")
-    st.markdown("---")
+# 1. Cấu hình trang
+st.set_page_config(page_title="AgriLoop Credit Engine", layout="wide")
 
-    # 1. GIẢI THÍCH CƠ CHẾ (HÀM TOÁN HỌC)
-    st.subheader("1. Cơ chế tính điểm (Weighted Scoring Model)")
-    st.latex(r'''
-        Score = (Q \cdot 0.4) + (R \cdot 0.3) + (V \cdot 0.2) + (T \cdot 0.1)
-    ''')
-    st.info("""
-    **Trong đó các trọng số (Weights) được quy định:**
-    - **Q (Quality - 40%):** Chỉ số chất lượng (độ ẩm, tạp chất).
-    - **R (Reliability - 30%):** Độ tin cậy (giao hàng đúng hẹn, không hủy đơn).
-    - **V (Volume - 20%):** Sản lượng đóng góp cho hệ thống.
-    - **T (Transparency - 10%):** Độ minh bạch trong khai báo dữ liệu.
+st.title("🛡️ AgriLoop Credit Intelligence Engine")
+st.write("Hệ thống mô phỏng thẩm định và xếp hạng tín nhiệm đối tác dựa trên dữ liệu chuỗi cung ứng.")
+
+# 2. Giả lập Database đối tác
+data = {
+    "Nông dân Châu Hân": {"Q": 95, "R": 90, "V": 85, "F": 100, "Tier": "Platinum", "Risk": "Rất thấp"},
+    "Hợp tác xã An": {"Q": 70, "R": 65, "V": 90, "F": 60, "Tier": "Silver", "Risk": "Trung bình"},
+    "Tài xế Vĩnh Khang": {"Q": 85, "R": 95, "V": 75, "F": 80, "Tier": "Gold", "Risk": "Thấp"},
+    "Nhà máy Alpha": {"Q": 90, "R": 85, "V": 95, "F": 90, "Tier": "Platinum", "Risk": "Rất thấp"}
+}
+
+# 3. Giao diện chọn đối tác
+st.sidebar.header("🔍 Truy xuất hồ sơ")
+selected_name = st.sidebar.selectbox("Chọn đối tác để kiểm tra:", list(data.keys()))
+p_info = data[selected_name]
+
+# 4. Hiển thị Dashboard Tín nhiệm
+col1, col2 = st.columns([1, 1])
+
+with col1:
+    st.subheader(f"Hồ sơ đối tác: {selected_name}")
+    # Hiển thị thẻ tín nhiệm (UI/UX kiểu Card)
+    st.markdown(f"""
+        <div style="background-color: #ffffff; padding: 20px; border-radius: 15px; border-left: 10px solid #1e3a8a; box-shadow: 2px 2px 10px rgba(0,0,0,0.1);">
+            <h2 style="color: #1e3a8a; margin: 0;">{p_info['Tier']} Partner</h2>
+            <p style="color: #64748b;">Mã định danh: AG-2026-X10</p>
+            <hr>
+            <p><b>Mức độ rủi ro:</b> {p_info['Risk']}</p>
+            <p><b>Trạng thái:</b> Đang hoạt động</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("---")
+    st.write("**Khuyến nghị từ hệ thống:**")
+    if p_info['Tier'] == "Platinum":
+        st.success("Hệ thống đề xuất: Cho phép ứng tiền trước 50% giá trị đơn hàng.")
+    elif p_info['Tier'] == "Gold":
+        st.info("Hệ thống đề xuất: Áp dụng mức phí vận chuyển ưu đãi loại 2.")
+    else:
+        st.warning("Hệ thống đề xuất: Yêu cầu kiểm định hàng hóa 100% tại điểm thu gom.")
+
+with col2:
+    st.subheader("📊 Ma trận năng lực (Ability Matrix)")
+    
+    # Vẽ biểu đồ Radar bằng Plotly
+    categories = ['Chất lượng (Q)', 'Đúng hẹn (R)', 'Sản lượng (V)', 'Tài chính (F)']
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatterpolar(
+        r=[p_info['Q'], p_info['R'], p_info['V'], p_info['F']],
+        theta=categories,
+        fill='toself',
+        name=selected_name,
+        line_color='#1e3a8a'
+    ))
+
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(visible=True, range=[0, 100])
+        ),
+        showlegend=False
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# 5. Phân tích học thuật (Academic Insight)
+st.markdown("---")
+with st.expander("📚 Xem cơ chế phân tích học thuật (Model Mechanism)"):
+    st.write("""
+    Hệ thống sử dụng mô hình **Multi-Criteria Decision Analysis (MCDA)** kết hợp với lịch sử giao dịch thực tế để mô phỏng năng lực đối tác:
+    - **Quality Index (Q):** Phân tích từ dữ liệu kiểm định độ ẩm/tạp chất.
+    - **Reliability Index (R):** Đánh giá dựa trên độ lệch thời gian thực tế so với cam kết (Lead-time variance).
+    - **Volume Consistency (V):** Khả năng duy trì nguồn cung ổn định theo quý.
+    - **Financial Health (F):** Tốc độ xoay vòng vốn và lịch sử thanh toán giữa các bên.
     """)
-
-    # 2. DỮ LIỆU THÔ (RAW DATA)
-    st.subheader("2. Dữ liệu hiệu suất thực tế")
-    
-    raw_data = pd.DataFrame({
-        'Đối tác': ['Nông dân Châu Hân', 'Hợp tác xã An', 'Tài xế Vĩnh Khang', 'Nhà máy Alpha'],
-        'Chất lượng (Q)': [95, 80, 90, 85],
-        'Đúng hẹn (R)': [98, 70, 95, 90],
-        'Sản lượng (V)': [90, 85, 80, 95],
-        'Minh bạch (T)': [100, 75, 90, 80]
-    })
-
-    # Tính toán điểm tổng kết dựa trên công thức weights
-    raw_data['Điểm Tổng'] = (
-        raw_data['Chất lượng (Q)'] * 0.4 + 
-        raw_data['Đúng hẹn (R)'] * 0.3 + 
-        raw_data['Sản lượng (V)'] * 0.2 + 
-        raw_data['Minh bạch (T)'] * 0.1
-    ).round(1)
-
-    # Phân hạng dựa trên điểm (Tiering)
-    def classify_tier(score):
-        if score >= 90: return "💎 Platinum"
-        elif score >= 80: return "🥇 Gold"
-        else: return "🥈 Silver"
-
-    raw_data['Xếp hạng (Tier)'] = raw_data['Điểm Tổng'].apply(classify_tier)
-
-    # Hiển thị bảng kết quả chuyên nghiệp
-    st.dataframe(raw_data.set_index('Đối tác').style.background_gradient(subset=['Điểm Tổng'], cmap='Greens'))
-
-    # 3. CHI TIẾT CÁ NHÂN (DECISION SUPPORT)
-    st.markdown("---")
-    st.subheader("3. Truy xuất hồ sơ tín dụng cá nhân")
-    selected_partner = st.selectbox("Chọn đối tác để xem chi tiết:", raw_data['Đối tác'])
-    
-    partner_info = raw_data[raw_data['Đối tác'] == selected_partner].iloc[0]
-    
-    col1, col2 = st.columns([1, 2])
-    with col1:
-        st.metric("Điểm Tín Nhiệm", partner_info['Điểm Tổng'])
-        st.write(f"**Hạng:** {partner_info['Xếp hạng (Tier)']}")
-    
-    with col2:
-        st.write("**Phân tích chuyên sâu:**")
-        # Mô phỏng thanh tiến trình cho từng tiêu chí
-        st.write(f"Chất lượng (Q): {partner_info['Chất lượng (Q)']}/100")
-        st.progress(partner_info['Chất lượng (Q)'] / 100)
-        
-        st.write(f"Đúng hẹn (R): {partner_info['Đúng hẹn (R)']}/100")
-        st.progress(partner_info['Đúng hẹn (R)'] / 100)
-
-show_academic_credit_scoring()
